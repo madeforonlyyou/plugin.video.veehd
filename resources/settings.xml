@@ -1,0 +1,4 @@
+<settings>
+	<setting id="uname" label="30000" type="text" default=""/>
+	<setting id="pwd"   label="30001" type="text" option="hidden" default=""/>
+</settings>

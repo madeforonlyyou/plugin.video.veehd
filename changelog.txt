@@ -1,0 +1,14 @@
+v1.3.1:
+  - fix flv and avi files
+
+v1.3:
+  - correspond to site changed
+
+v1.2:
+  - cleanup codes
+
+v1.1:
+  - cleanup codes
+
+v1.0:
+  - initial release
