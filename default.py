@@ -42,9 +42,8 @@ class Veehd(object):
         title = ''
         self.download_page("http://veehd.com/cookie?do=nsfw_show")
         response, code = self.download_page(url)
-        if code == 200 and response.url == url:
-            title = re.findall(r'<title>(.+?) on Veehd</title>', response)[0]
-        else:
+        title = re.findall(r'<title>(.+?) on Veehd</title>', response)[0]
+        if not title:
             return
         private_video_url = "http://veehd.com/" + re.findall(r'.*(vpi\?h.*)"', response)[1]
         response, code = self.download_page(private_video_url)
