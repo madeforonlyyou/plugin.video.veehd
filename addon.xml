@@ -1,18 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="plugin.video.veehd"
        name="VeeHD"
-       version="1.3.1"
-       provider-name="nixa">
+       version="2.0"
+       provider-name="bobcat15">
   <requires>
-    <import addon="xbmc.python" version="1.0"/>
+    <import addon="xbmc.python" version="2.1.0"/>
+    <import addon="script.module.requests" version="2.8.1"/>
+    <import addon="script.module.beautifulsoup" version="3.2.1"/> 
   </requires>
   <extension point="xbmc.python.pluginsource"
             library="default.py">
         <provides>video</provides>
   </extension>
   <extension point="xbmc.addon.metadata">
-    <summary>Search and stream good movies</summary>
-    <description>Search and stream good movies from veehd.com. Get user/pass from http://veehd.com</description>
+    <summary lang="en">Search and stream good movies</summary>
+    <description lang="en">Search and stream good movies from veehd.com. Get user/pass from http://veehd.com</description>
     <platform>all</platform>
   </extension>
 </addon>
