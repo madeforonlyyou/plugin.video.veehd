@@ -16,5 +16,6 @@
     <summary lang="en">Search and stream good movies</summary>
     <description lang="en">Search and stream good movies from veehd.com. Get user/pass from http://veehd.com</description>
     <platform>all</platform>
+    <license>GNU GENERAL PUBLIC LICENSE. Version 3, 29 June 2007</license>
   </extension>
 </addon>
