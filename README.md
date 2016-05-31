@@ -3,6 +3,13 @@
 ## Usage
 Download the zip [file](https://github.com/madeforonlyyou/plugin.video.veehd/archive/master.zip) and install it using kodi.
 
+## Currently supports
+
+- Dashboard
+- Friends
+- Channels
+- Search
+
 ## Donate
 **Making a donation is an act of generosity. Your support, however modest it might be, is necessary. Be it because you love or enjoy this add-on. Your donations help to continue to support and improve this project!**
 

@@ -37,6 +37,31 @@ class Veehd(object):
         response = self.req.get(url, headers=headers)
         return response.text, response.status_code
 
+    def list_friends(self, friends_page):
+        thumbs = []
+        urls = []
+        titles = []
+        bs = BeautifulSoup(friends_page)
+        friends = bs.findAll("div", {"class": ["smallUserpic online",
+                                               "smallUserpic"]})
+        for div in friends:
+            thumbs.append(div('img')[0]['src'])
+            profile_id = os.path.basename(div('a')[0]['href'])
+            urls.append("http://veehd.com/search?usr=" + profile_id)
+            title = div('img')[0].get('title', None)
+            if title:
+                titles.append(title)
+            else:
+                titles.append(div('a')[0].get('title'))
+
+        frnds = [(thumbs[i], titles[i], urls[i]) for i in range(0, len(urls))]
+        for thumb, name, url in frnds:
+            addDir(name, url, 2, '')
+        page = bs.findAll('li', {'class': 'currentpage'})
+        next_page = int(page[0].text) + 1
+        addDir('Next page', 'http://veehd.com/friends?page=%s' % next_page, 2,
+               '')
+
     def get_video_link(self, url):
         title = ''
         self.download_page("http://veehd.com/cookie?do=nsfw_show")
@@ -68,6 +93,7 @@ class Veehd(object):
 
 def CATS():
         addDir('Dashboard', 'http://veehd.com/dashboard?f=all', 2, '')
+        addDir('Friends', 'http://veehd.com/friends', 2, '')
         addDir('Channels', 'http', 1, '')
         addDir('Recent', 'http://veehd.com/recent', 2, '')
         addDir('Popular', 'http://veehd.com/popular', 2, '')
@@ -100,6 +126,10 @@ def INDEX(url, name):
             urls.append(span('a')[0]['href'].split('/')[2])
             names.append(span('a')[0].text)
             thumbs.append(span('img')[0]['src'])
+    elif url.startswith("http://veehd.com/friends"):
+        text, code = vee.download_page(url)
+        if code == 200:
+            vee.list_friends(text)
     else:
         page, code = vee.download_page(url)
         thumbs = re.compile('<img id="img.+?" src="(.+?)"').findall(page)
