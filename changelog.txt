@@ -1,3 +1,9 @@
+v3.1:
+  - Fix issues with friends list
+v3.0:
+  - Friends list support
+v2.0.0:
+  - Release by new owner
 v1.3.1:
   - fix flv and avi files
 

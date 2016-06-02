@@ -19,10 +19,24 @@ headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.6; rv:12.0'
 LOGIN_URL = 'http://veehd.com/login'
 
 
-class Veehd(object):
+class Borg(object):
+    __shared_state = None
+
     def __init__(self):
-        self.req = requests.Session()
-        self.cookie, self.index_page = self.login()
+        if not Borg.__shared_state:
+            Borg.__shared_state = self.__dict__
+        else:
+            self.__dict__ = Borg.__shared_state
+
+
+class Veehd(Borg):
+    def __init__(self):
+        super(Veehd, self).__init__()
+
+        if not hasattr(self, 'req'):
+            xbmc.log("Initiating VeeHD object")
+            self.req = requests.Session()
+            self.cookie, self.index_page = self.login()
 
     def login(self):
         login_data = {'ref': 'http://veehd.com/dashboard', 'uname': uname,
@@ -30,7 +44,12 @@ class Veehd(object):
                       'remember_me': 'on'}
         response = self.req.post(LOGIN_URL, data=login_data, headers=headers)
         if response.url != 'http://veehd.com/dashboard':
-            print "Login failed. check your username and password"
+            xbmc.log("Login failed. check your username and password")
+            dia = xbmcgui.Dialog()
+            dia.ok("Login Failed!", "Please check login details")
+            vhd.openSettings(sys.argv[0])
+
+        self.download_page("http://veehd.com/cookie?do=nsfw_show")
         return response.cookies, response.text
 
     def download_page(self, url):
@@ -42,21 +61,31 @@ class Veehd(object):
         urls = []
         titles = []
         bs = BeautifulSoup(friends_page)
-        friends = bs.findAll("div", {"class": ["smallUserpic online",
-                                               "smallUserpic"]})
+        friends = bs.findAll("div", {"class": ["friend online", "friend "]})
         for div in friends:
+            vid_count = int(div('span', {'id': 'userPosted'})[0].text)
+            if vid_count == 0:
+                # We don't want to display friends with no videos
+                continue
+            vid_count = "(%s)" % vid_count
             thumbs.append(div('img')[0]['src'])
-            profile_id = os.path.basename(div('a')[0]['href'])
-            urls.append("http://veehd.com/search?usr=" + profile_id)
+            p_id = os.path.basename(div('a')[0]['href'])
+            urls.append(("%s?url=%s&mode=%s") % (sys.argv[0], p_id, str(5)))
             title = div('img')[0].get('title', None)
             if title:
-                titles.append(title)
+                titles.append(title + vid_count)
             else:
-                titles.append(div('a')[0].get('title'))
+                titles.append(div('a')[0].get('title') + vid_count)
 
         frnds = [(thumbs[i], titles[i], urls[i]) for i in range(0, len(urls))]
-        for thumb, name, url in frnds:
-            addDir(name, url, 2, '')
+        for thumb, name, uri in frnds:
+            liz = xbmcgui.ListItem(name,
+                                   iconImage=thumb)
+            liz.setInfo("video", {"Title": name})
+            xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),
+                                        url=uri,
+                                        listitem=liz,
+                                        isFolder=True)
         page = bs.findAll('li', {'class': 'currentpage'})
         next_page = int(page[0].text) + 1
         addDir('Next page', 'http://veehd.com/friends?page=%s' % next_page, 2,
@@ -64,7 +93,6 @@ class Veehd(object):
 
     def get_video_link(self, url):
         title = ''
-        self.download_page("http://veehd.com/cookie?do=nsfw_show")
         response, code = self.download_page(url)
         if code == 200:
             title = re.findall(r'<title>(.+?) on Veehd</title>', response)
@@ -87,7 +115,6 @@ class Veehd(object):
             bs = BeautifulSoup(response)
 
         vid_url = bs('a')[0]['href']
-        print title, vid_url
         return title, vid_url
 
 
@@ -118,7 +145,6 @@ def INDEX(url, name):
     names = []
     thumbs = []
     nxt = []
-    vee.download_page("http://veehd.com/cookie?do=nsfw_show")
     if url.startswith("http://veehd.com/dashboard"):
         bs = BeautifulSoup(vee.index_page)
         span_list = bs.findAll('span', {'class': 'tlComment'})
@@ -127,10 +153,13 @@ def INDEX(url, name):
             names.append(span('a')[0].text)
             thumbs.append(span('img')[0]['src'])
     elif url.startswith("http://veehd.com/friends"):
+        xbmc.log("Loading friends page %s" % url)
         text, code = vee.download_page(url)
+        xbmc.log("Code=%s" % code)
         if code == 200:
             vee.list_friends(text)
     else:
+        xbmc.log("Downloading url: %s" % url)
         page, code = vee.download_page(url)
         thumbs = re.compile('<img id="img.+?" src="(.+?)"').findall(page)
         names = re.compile('<a href="/video/.+?">(.+?)</a>').findall(page)
@@ -156,7 +185,12 @@ def INDEX(url, name):
 
 def VIDEO(url):
     vee = Veehd()
-    title, video_url = vee.get_video_link(url)
+    try:
+        title, video_url = vee.get_video_link(url)
+    except Exception as e:
+        xbmc.log("Exception parsing video page: %s" % e)
+        return None
+
     if title:
         name = re.sub(r'\s+', '_', title)
     if video_url:
@@ -211,6 +245,17 @@ def SEARCH():
                                         listitem=item)
         for url in nxt:
             addDir('Next page', 'http://veehd.com' + url + '&page=2', 2, '')
+
+
+def SHOW_FRIENDS_STUFF(p_id):
+    # r_private = 'http://veehd.com/search?private=%s' % p_id
+    # pop_private = 'http://veehd.com/search?private=%s&t=pop' % p_id
+    r_public = 'http://veehd.com/search?usr=%s' % p_id
+    pop_public = 'http://veehd.com/search?usr=%s&t=pop' % p_id
+    # addDir('Private - Recent', r_private, 2, '')
+    # addDir('Private - Pop', pop_private, 2, '')
+    addDir('Public - Popular', pop_public, 2, '')
+    addDir('Public - Recent', r_public, 2, '')
 
 
 def Download(url, dest):
@@ -299,7 +344,7 @@ def addDir(name, url, mode, thumbnail):
                                              urllib.quote_plus(name))
         ok = True
         liz = xbmcgui.ListItem(name,
-                               iconImage="DefaultFolder.png",
+                               iconImage="defaultfolder.png",
                                thumbnailImage=thumbnail)
         liz.setInfo("video", {"Title": name})
         ok = xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),
@@ -356,23 +401,24 @@ try:
     mode = int(params["mode"])
 except:
     pass
-print "Mode: " + str(mode)
-print "URL: " + str(url)
-print "Name: " + str(name)
+
 if mode is None or url is None or len(url) < 1:
-    print "categories"
+    xbmc.log("Show Categories")
     CATS()
 elif mode == 1:
-    print "PAGE"
+    xbmc.log("Channels - PAGE")
     CHN(url)
 elif mode == 2:
-    print "PAGE"
+    xbmc.log("Calling Index with url=%s, name=%s" % (url, name))
     INDEX(url, name)
 elif mode == 3:
-    print "PAGE VIDEO"
+    xbmc.log("Video - url=%s" % url)
     VIDEO(url)
 elif mode == 4:
-    print "SEARCH  :" + url
+    xbmc.log("Search - url=%s" % url)
     SEARCH()
+elif mode == 5:
+    xbmc.log("Friends")
+    SHOW_FRIENDS_STUFF(url)
 
 xbmcplugin.endOfDirectory(int(sys.argv[1]))
